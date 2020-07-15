@@ -14,15 +14,15 @@ from .latex import LatexExporter
 
 class LatexFailed(IOError):
     """Exception for failed latex run
-    
+
     Captured latex output is in error.output.
     """
     def __init__(self, output):
         self.output = output
-    
+
     def __unicode__(self):
         return u"PDF creating failed, captured latex output:\n%s" % self.output
-    
+
     def __str__(self):
         u = self.__unicode__()
         return cast_bytes_py2(u)
@@ -66,7 +66,7 @@ class PDFExporter(LatexExporter):
     writer = Instance("nbconvert.writers.FilesWriter", args=(), kw={'build_directory': '.'})
 
     output_mimetype = "application/pdf"
-    
+
     _captured_output = List()
 
     @default('file_extension')
@@ -120,10 +120,7 @@ class PDFExporter(LatexExporter):
 
         times = 'time' if count == 1 else 'times'
         self.log.info("Running %s %i %s: %s", command_list[0], count, times, command)
-        
-        shell = (sys.platform == 'win32')
-        if shell:
-            command = subprocess.list2cmdline(command)
+
         env = os.environ.copy()
         prepend_to_env_search_path('TEXINPUTS', self.texinputs, env)
         prepend_to_env_search_path('BIBINPUTS', self.texinputs, env)
@@ -133,7 +130,7 @@ class PDFExporter(LatexExporter):
             stdout = subprocess.PIPE if not self.verbose else None
             for index in range(count):
                 p = subprocess.Popen(command, stdout=stdout, stderr=subprocess.STDOUT,
-                        stdin=null, shell=shell, env=env)
+                        stdin=null, shell=False, env=env)
                 out, _ = p.communicate()
                 if p.returncode:
                     if self.verbose:
@@ -170,7 +167,7 @@ class PDFExporter(LatexExporter):
             self.log.debug(u"%s output: %s\n%s", command[0], command, out)
 
         return self.run_command(self.bib_command, filename, 1, log_error, raise_on_failure)
-    
+
     def from_notebook_node(self, nb, resources=None, **kw):
         latex, resources = super().from_notebook_node(
             nb, resources=resources, **kw
@@ -197,13 +194,12 @@ class PDFExporter(LatexExporter):
             self.log.info('PDF successfully created')
             with open(pdf_file, 'rb') as f:
                 pdf_data = f.read()
-        
+
         # convert output extension to pdf
         # the writer above required it to be tex
         resources['output_extension'] = '.pdf'
         # clear figure outputs, extracted by latex export,
         # so we don't claim to be a multi-file export.
         resources.pop('outputs', None)
-        
+
         return pdf_data, resources
-    
